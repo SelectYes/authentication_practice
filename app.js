@@ -15,7 +15,8 @@ const port =                    3000;
 mongoose.connect('mongodb://localhost:27017/auth_demo', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useFindAndModify: false
+    useFindAndModify: false,
+    useCreateIndex: true
 })
 .then(() => console.log('CONNECTED TO DB.'))
 .catch(error => console.log(error.message));
@@ -31,8 +32,18 @@ app.use(require('express-session')({
 app.use(passport.initialize());
 app.use(passport.session());
 
+passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
+
+
+// MIDDLEWARE FOR LOGGING OUT OF SESSION
+const isLoggedIn = (req, res, next) => {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.redirect('/login');
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                              ROUTES                                                  //
@@ -42,13 +53,15 @@ app.get('/', (req, res)  => {
     res.render('home');
 });
 
-app.get('/secret', (req, res) => {
+app.get('/secret', isLoggedIn, (req, res) => {
     res.render('secret');
 });
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-//                                              AUTH-ROUTES                                             //
+//                                       AUTHENTICATION-ROUTES                                          //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SIGN-UP ROUTES
 
 app.get('/register', (req, res) => {
     res.render('register')
@@ -64,8 +77,25 @@ app.post('/register', async (req, res) => {
         console.log(error);
         return res.render('register')
     }
+});
 
+// SIGN-IN/OUT ROUTES
+
+app.get('/login', (req, res) => {
+    res.render('login')
+});
+
+app.post('/login', passport.authenticate('local', {
+    successRedirect: '/secret',
+    failureRedirect: '/login'
+}), (req, res) => {
 
 });
+
+app.get('/logout', (req, res) => {
+    req.logout();
+    res.redirect('/');
+});
+
 
 app.listen(port, () => console.log(`Serving Authentication Demo on localhost:${port}`));
