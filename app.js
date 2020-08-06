@@ -54,8 +54,18 @@ app.get('/register', (req, res) => {
     res.render('register')
 });
 
-app.post('/register', (req, res) => {
-    res.render('register')
+app.post('/register', async (req, res) => {
+    try {
+        await User.register(new User({username: req.body.username}), req.body.password)
+        passport.authenticate('local')(req, res, () => {
+            res.redirect('/secret');
+        })
+    } catch (error) {
+        console.log(error);
+        return res.render('register')
+    }
+
+
 });
 
 app.listen(port, () => console.log(`Serving Authentication Demo on localhost:${port}`));
